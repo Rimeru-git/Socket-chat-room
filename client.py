@@ -1,7 +1,5 @@
 import socket
 import threading
-# test github pull
-# test github fetch
 
 state = True
 
