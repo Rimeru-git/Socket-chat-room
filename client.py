@@ -1,23 +1,25 @@
 import socket
 import threading
 
-state = True
+state = threading.Event()
+state.set()
 
 def Send(client):
-    global state
-    while True: 
-        message = nickname + ": " + input()
-        length = len(message)
-        client.sendall((str(length) + '\r\n' + message).encode("utf8"))
-        if message == nickname + ": !quit":
-            state = False
-            client.close()
-            print("Closing connection!")
-            break
+    while state.is_set(): 
+        try:
+            message = nickname + ": " + input()
+            length = len(message)
+            client.sendall((str(length) + '\r\n' + message).encode("utf8"))
+            if message == nickname + ": !quit":
+                state.clear()
+                client.close()
+                print("Closing connection!")
+                break
+        except BlockingIOError:
+            pass
 
 def Receive(client):
-    global state
-    while True: 
+    while state.is_set(): 
         try:
             tmp = b''
             while tmp[-2:] != b"\r\n":
@@ -32,16 +34,19 @@ def Receive(client):
                 client.send((str(len(nickname)) + '\r\n' + nickname).encode('utf8'))
             else:
                 print(message.decode())
+        except BlockingIOError:
+            pass
         except:
-            if state:
-                print("An error occurred!")
-                client.close()
+            state.clear()
+            print("An error occurred!")
+            client.close()   
             break
 
 nickname = input("Choose your nickname: ")
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(('127.0.0.1', 4321))
+client.setblocking(False)
 
 receiveThread = threading.Thread(target=Receive, args=(client,))
 sendThread = threading.Thread(target=Send, args=(client,))
