@@ -14,10 +14,13 @@ server.listen()
 
 clients = []
 
+broadcastLock = threading.Lock()
+
 def Broadcast(message, client):
-    for i in clients:
-        if i != client:
-            i.conn.sendall(message)
+    with broadcastLock:
+        for i in clients:
+            if i != client:
+                i.conn.sendall(message)
 
 def Handle(client):
     while True:
